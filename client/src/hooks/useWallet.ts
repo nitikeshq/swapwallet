@@ -46,15 +46,32 @@ export function useWallet() {
           throw new Error(`Unsupported wallet provider: ${provider}`);
       }
       
-      setState(prev => ({ 
-        ...prev, 
-        connection, 
-        isConnecting: false,
-        error: null 
-      }));
+      // This will be handled in the balance fetching section above
       
       // Fetch balances after connection
-      fetchBalances(connection.address);
+      try {
+        console.log('[WALLET HOOK] Fetching balances after connection...');
+        const balances = await walletService.getTokenBalances(connection.address);
+        
+        setState(prev => ({ 
+          ...prev, 
+          connection, 
+          balances,
+          isConnecting: false,
+          error: null 
+        }));
+        
+        console.log('[WALLET HOOK] Connection and balances updated successfully');
+      } catch (balanceError) {
+        console.error('[WALLET HOOK] Failed to fetch balances after connection:', balanceError);
+        // Still set the connection even if balance fetch fails
+        setState(prev => ({ 
+          ...prev, 
+          connection, 
+          isConnecting: false,
+          error: null 
+        }));
+      }
       
       toast({
         title: "Wallet Connected",
@@ -170,7 +187,7 @@ export function useWallet() {
   // Check for existing wallet connection on mount
   useEffect(() => {
     const checkExistingConnection = async () => {
-      if (window.ethereum) {
+      if (window.ethereum && !state.connection) {
         try {
           const accounts = await window.ethereum.request({ method: 'eth_accounts' });
           if (accounts && accounts.length > 0) {
@@ -193,8 +210,17 @@ export function useWallet() {
               connection: existingConnection,
             }));
             
-            // Fetch balances for the existing connection
-            fetchBalances(accounts[0]);
+            // Fetch balances
+            try {
+              const balances = await walletService.getTokenBalances(accounts[0]);
+              setState(prev => ({
+                ...prev,
+                connection: existingConnection,
+                balances,
+              }));
+            } catch (error) {
+              console.error('[WALLET HOOK] Failed to fetch balances on reconnect:', error);
+            }
           }
         } catch (error) {
           console.error('[WALLET HOOK] Failed to check existing connection:', error);
@@ -203,14 +229,7 @@ export function useWallet() {
     };
     
     checkExistingConnection();
-  }, [fetchBalances]);
-
-  // Auto-fetch balances when connection changes
-  useEffect(() => {
-    if (isConnected && state.connection?.address) {
-      fetchBalances();
-    }
-  }, [isConnected, state.connection?.address, fetchBalances]);
+  }, []);
 
   // Listen for account changes
   useEffect(() => {
