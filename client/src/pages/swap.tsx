@@ -20,11 +20,10 @@ export default function SwapPage() {
 
   // Handle View Chart button click
   const handleViewChart = () => {
-    // Direct link to YHT/USDT pool on PancakeSwap using the actual pool address
-    const poolAddress = "0x6fd64bd3c577b9613ee293d38e6018536d05c799";
-    const pancakeSwapPoolUrl = `https://pancakeswap.finance/info/v3/pairs/${poolAddress}`;
-    window.open(pancakeSwapPoolUrl, '_blank');
-    console.log('[SWAP PAGE] Opening PancakeSwap pool chart for YHT/USDT:', poolAddress);
+    // Direct link to YHT token on CoinMarketCap DEX
+    const coinMarketCapUrl = "https://dex.coinmarketcap.com/token/bsc/0x3279ef4614f241a389114c77cdd28b70fca9537a/";
+    window.open(coinMarketCapUrl, '_blank');
+    console.log('[SWAP PAGE] Opening CoinMarketCap DEX page for YHT token');
   };
 
   // Handle Referrals button click
