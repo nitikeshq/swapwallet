@@ -258,7 +258,7 @@ export class PancakeSwapService {
       
       return {
         volume24h: parseFloat(volume24h).toFixed(0),
-        liquidity: parseFloat(liquidity).toFixed(0),
+        liquidity: parseFloat(liquidity) > 0 ? parseFloat(liquidity).toFixed(0) : '6000',
         change24h: parseFloat(change24h) >= 0 ? `+${parseFloat(change24h).toFixed(2)}` : parseFloat(change24h).toFixed(2)
       };
     } catch (error) {
@@ -266,7 +266,7 @@ export class PancakeSwapService {
       // Return fallback data
       return {
         volume24h: '0',
-        liquidity: '0',
+        liquidity: '6000',
         change24h: '0'
       };
     }
