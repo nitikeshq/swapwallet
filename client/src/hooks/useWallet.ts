@@ -156,7 +156,7 @@ export function useWallet() {
         error: error.message 
       }));
     }
-  }, [state.connection?.address]);
+  }, []);
 
   // Get balance for specific token
   const getTokenBalance = useCallback((tokenSymbol: string): string => {
@@ -165,7 +165,53 @@ export function useWallet() {
   }, [state.balances]);
 
   // Check if wallet is connected
-  const isConnected = Boolean(state.connection?.isConnected);
+  const isConnected = Boolean(state.connection?.isConnected && state.connection?.address);
+
+  // Debug logging
+  console.log('[WALLET HOOK] State debug:', {
+    hasConnection: !!state.connection,
+    connectionIsConnected: state.connection?.isConnected,
+    connectionAddress: state.connection?.address,
+    derivedIsConnected: isConnected
+  });
+
+  // Check for existing wallet connection on mount
+  useEffect(() => {
+    const checkExistingConnection = async () => {
+      if (window.ethereum) {
+        try {
+          const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+          if (accounts && accounts.length > 0) {
+            console.log('[WALLET HOOK] Found existing connection:', accounts[0]);
+            
+            // Get current chain ID
+            const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+            const numericChainId = parseInt(chainId, 16);
+            
+            // Recreate connection state
+            const existingConnection: WalletConnection = {
+              address: accounts[0],
+              chainId: numericChainId,
+              isConnected: true,
+              provider: window.ethereum,
+            };
+            
+            setState(prev => ({
+              ...prev,
+              connection: existingConnection,
+            }));
+            
+            // Fetch balances for the existing connection
+            await fetchBalances(accounts[0]);
+          }
+        } catch (error) {
+          console.error('[WALLET HOOK] Failed to check existing connection:', error);
+        }
+      }
+    };
+    
+    checkExistingConnection();
+  }, []);
 
   // Auto-fetch balances when connection changes
   useEffect(() => {
