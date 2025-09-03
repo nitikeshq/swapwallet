@@ -9,6 +9,8 @@ export const users = pgTable("users", {
   referralCode: text("referral_code").unique(),
   referredBy: text("referred_by"),
   totalEarnings: decimal("total_earnings", { precision: 18, scale: 8 }).default("0"),
+  milestoneAchieved: boolean("milestone_achieved").default(false),
+  btcBonusClaimed: boolean("btc_bonus_claimed").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -21,6 +23,7 @@ export const transactions = pgTable("transactions", {
   fromAmount: decimal("from_amount", { precision: 18, scale: 8 }).notNull(),
   toAmount: decimal("to_amount", { precision: 18, scale: 8 }).notNull(),
   status: text("status").notNull().default("pending"), // pending, confirmed, failed
+  burningFee: decimal("burning_fee", { precision: 18, scale: 8 }).default("0"),
   blockNumber: integer("block_number"),
   gasUsed: decimal("gas_used", { precision: 18, scale: 8 }),
   gasPrice: decimal("gas_price", { precision: 18, scale: 8 }),

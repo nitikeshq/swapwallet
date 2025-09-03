@@ -16,6 +16,8 @@ export interface IStorage {
   getUserByReferralCode(referralCode: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUserEarnings(walletAddress: string, amount: string): Promise<void>;
+  checkAndAwardMilestone(walletAddress: string): Promise<boolean>;
+  claimBtcBonus(walletAddress: string): Promise<void>;
 
   // Transaction management
   getTransactions(userAddress: string, limit?: number): Promise<Transaction[]>;
@@ -70,6 +72,8 @@ export class MemStorage implements IStorage {
       referralCode: insertUser.referralCode || null,
       referredBy: insertUser.referredBy || null,
       totalEarnings: insertUser.totalEarnings || "0",
+      milestoneAchieved: insertUser.milestoneAchieved || false,
+      btcBonusClaimed: insertUser.btcBonusClaimed || false,
       createdAt: new Date(),
     };
     
@@ -89,6 +93,38 @@ export class MemStorage implements IStorage {
       const additionalEarnings = parseFloat(amount);
       user.totalEarnings = (currentEarnings + additionalEarnings).toString();
       this.users.set(walletAddress.toLowerCase(), user);
+      
+      // Check for milestone achievement after updating earnings
+      await this.checkAndAwardMilestone(walletAddress);
+    }
+  }
+
+  async checkAndAwardMilestone(walletAddress: string): Promise<boolean> {
+    const user = this.users.get(walletAddress.toLowerCase());
+    if (!user) return false;
+    
+    const totalEarnings = parseFloat(user.totalEarnings || "0");
+    const MILESTONE_THRESHOLD = 200000; // $200,000
+    
+    // Check if user has reached milestone but hasn't been awarded yet
+    if (totalEarnings >= MILESTONE_THRESHOLD && !user.milestoneAchieved) {
+      user.milestoneAchieved = true;
+      this.users.set(walletAddress.toLowerCase(), user);
+      
+      console.log(`[STORAGE] Milestone achieved for user ${walletAddress}: $${totalEarnings}`);
+      return true;
+    }
+    
+    return false;
+  }
+
+  async claimBtcBonus(walletAddress: string): Promise<void> {
+    const user = this.users.get(walletAddress.toLowerCase());
+    if (user && user.milestoneAchieved && !user.btcBonusClaimed) {
+      user.btcBonusClaimed = true;
+      this.users.set(walletAddress.toLowerCase(), user);
+      
+      console.log(`[STORAGE] BTC bonus claimed for user ${walletAddress}`);
     }
   }
 
@@ -110,6 +146,7 @@ export class MemStorage implements IStorage {
       id,
       userAddress: insertTransaction.userAddress.toLowerCase(),
       status: insertTransaction.status || "pending",
+      burningFee: insertTransaction.burningFee || "0",
       blockNumber: insertTransaction.blockNumber || null,
       gasUsed: insertTransaction.gasUsed || null,
       gasPrice: insertTransaction.gasPrice || null,

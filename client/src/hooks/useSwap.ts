@@ -99,6 +99,11 @@ export function useSwap() {
       // Execute the swap
       const swapTx = await pancakeSwapService.executeSwap(quote, userAddress, signer);
       
+      // Calculate burning fee for YHT -> USDT swaps (5%)
+      const burningFee = (quote.fromToken === 'YHT' && quote.toToken === 'USDT') 
+        ? (parseFloat(quote.fromAmount) * 0.05).toString() 
+        : '0';
+      
       // Save transaction to database
       await apiRequest('POST', '/api/transactions', {
         userAddress,
@@ -108,6 +113,7 @@ export function useSwap() {
         fromAmount: quote.fromAmount,
         toAmount: quote.toAmount,
         status: 'pending',
+        burningFee,
       });
 
       // Process referral if applicable

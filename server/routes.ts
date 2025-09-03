@@ -101,7 +101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const referralData = insertReferralSchema.parse(req.body);
       const referral = await storage.createReferral(referralData);
       
-      // Update referrer earnings
+      // Update referrer earnings (this will automatically check for milestone)
       await storage.updateUserEarnings(
         referral.referrerAddress,
         referral.commissionAmount
@@ -112,6 +112,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("[API ERROR] Create referral:", error);
       res.status(400).json({ error: "Invalid referral data" });
+    }
+  });
+
+  // Milestone and BTC bonus routes
+  app.post("/api/users/:walletAddress/claim-btc-bonus", async (req, res) => {
+    try {
+      const { walletAddress } = req.params;
+      await storage.claimBtcBonus(walletAddress);
+      
+      console.log("[API] BTC bonus claimed:", walletAddress);
+      res.json({ success: true, message: "BTC bonus claimed successfully" });
+    } catch (error) {
+      console.error("[API ERROR] Claim BTC bonus:", error);
+      res.status(400).json({ error: "Failed to claim BTC bonus" });
     }
   });
 

@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { useWallet } from "@/hooks/useWallet";
 import { WalletConnectModal } from "@/components/wallet/WalletConnectModal";
 import { CreateWalletModal } from "@/components/wallet/CreateWalletModal";
-import { Wallet, Settings } from "lucide-react";
+import { Wallet, Settings, FileText } from "lucide-react";
+import { Link } from "wouter";
 
 export function Header() {
   const { connection, isConnecting, isConnected, disconnect } = useWallet();
@@ -65,6 +66,10 @@ export function Header() {
               <a href="#" className="text-muted-foreground hover:text-accent transition-colors" data-testid="nav-history">
                 History
               </a>
+              <Link href="/terms" className="text-muted-foreground hover:text-accent transition-colors flex items-center gap-1" data-testid="nav-terms">
+                <FileText className="h-4 w-4" />
+                Terms
+              </Link>
             </nav>
 
             {/* Wallet Connection */}
