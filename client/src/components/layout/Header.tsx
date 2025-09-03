@@ -36,7 +36,7 @@ export function Header() {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             {/* Logo and Brand */}
-            <div className="flex items-center space-x-3">
+            <Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity" data-testid="logo-home-link">
               {/* Yahoo Token Y logo with 3D effect */}
               <div className="w-10 h-10 relative">
                 <div className="absolute inset-0 bg-gradient-to-br from-primary to-secondary rounded-lg rotate-3 opacity-70"></div>
@@ -50,22 +50,22 @@ export function Header() {
                 </h1>
                 <p className="text-xs text-muted-foreground">Best DeFi Trading</p>
               </div>
-            </div>
+            </Link>
 
             {/* Navigation */}
             <nav className="hidden md:flex items-center space-x-6">
-              <a href="#" className="text-foreground hover:text-accent transition-colors" data-testid="nav-swap">
+              <Link href="/" className="text-foreground hover:text-accent transition-colors" data-testid="nav-swap">
                 Swap
-              </a>
-              <a href="#" className="text-muted-foreground hover:text-accent transition-colors" data-testid="nav-portfolio">
+              </Link>
+              <Link href="/" className="text-muted-foreground hover:text-accent transition-colors" data-testid="nav-portfolio">
                 Portfolio
-              </a>
-              <a href="#" className="text-muted-foreground hover:text-accent transition-colors" data-testid="nav-referrals">
+              </Link>
+              <Link href="/" className="text-muted-foreground hover:text-accent transition-colors" data-testid="nav-referrals">
                 Referrals
-              </a>
-              <a href="#" className="text-muted-foreground hover:text-accent transition-colors" data-testid="nav-history">
+              </Link>
+              <Link href="/" className="text-muted-foreground hover:text-accent transition-colors" data-testid="nav-history">
                 History
-              </a>
+              </Link>
               <Link href="/terms" className="text-muted-foreground hover:text-accent transition-colors flex items-center gap-1" data-testid="nav-terms">
                 <FileText className="h-4 w-4" />
                 Terms
