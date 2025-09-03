@@ -120,6 +120,9 @@ export function useSwap() {
     onSuccess: (swapTx) => {
       console.log('[SWAP HOOK] Swap successful:', swapTx.hash);
       
+      // RESET LOADING STATE IMMEDIATELY
+      setState(prev => ({ ...prev, isSwapping: false }));
+      
       toast({
         title: "Swap Submitted",
         description: `Transaction submitted: ${swapTx.hash.slice(0, 10)}...`,
@@ -133,6 +136,9 @@ export function useSwap() {
     },
     onError: (error: any) => {
       console.error('[SWAP HOOK] Swap failed:', error);
+      
+      // RESET LOADING STATE ON ERROR TOO
+      setState(prev => ({ ...prev, isSwapping: false }));
       
       toast({
         title: "Swap Failed",
