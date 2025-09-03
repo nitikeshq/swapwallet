@@ -60,7 +60,7 @@ export class WalletService {
       console.log('[WALLET] Connecting to MetaMask...');
       
       if (!window.ethereum) {
-        throw new Error('MetaMask not installed');
+        throw new Error('MetaMask not installed. Please install MetaMask extension.');
       }
 
       // Request account access
@@ -69,8 +69,10 @@ export class WalletService {
       });
 
       if (!accounts || accounts.length === 0) {
-        throw new Error('No accounts found');
+        throw new Error('No accounts available. Please unlock MetaMask.');
       }
+
+      console.log('[WALLET] Accounts found:', accounts);
 
       // Check network
       const chainId = await window.ethereum.request({
@@ -78,10 +80,17 @@ export class WalletService {
       });
 
       const numericChainId = parseInt(chainId, 16);
+      console.log('[WALLET] Current network:', numericChainId, 'Target:', BSC_CHAIN_ID);
 
       // Switch to BSC if needed
       if (numericChainId !== BSC_CHAIN_ID) {
+        console.log('[WALLET] Switching to BSC network...');
         await this.switchToBSC();
+        // Get the chain ID again after switch
+        const newChainId = await window.ethereum.request({
+          method: 'eth_chainId',
+        });
+        console.log('[WALLET] Network switched to:', parseInt(newChainId, 16));
       }
 
       const connection: WalletConnection = {
@@ -91,11 +100,20 @@ export class WalletService {
         provider: window.ethereum,
       };
 
-      console.log('[WALLET] MetaMask connected:', connection.address);
+      console.log('[WALLET] MetaMask connected successfully:', connection.address);
       return connection;
-    } catch (error) {
+    } catch (error: any) {
       console.error('[WALLET ERROR] MetaMask connection failed:', error);
-      throw error;
+      // Provide better error messages
+      if (error.code === 4001) {
+        throw new Error('Connection rejected by user');
+      } else if (error.code === -32002) {
+        throw new Error('Connection request already pending');
+      } else if (error.message) {
+        throw new Error(error.message);
+      } else {
+        throw new Error('Failed to connect to MetaMask. Please try again.');
+      }
     }
   }
 

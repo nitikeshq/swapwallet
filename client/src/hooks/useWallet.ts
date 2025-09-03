@@ -54,7 +54,7 @@ export function useWallet() {
       }));
       
       // Fetch balances after connection
-      await fetchBalances(connection.address);
+      fetchBalances(connection.address);
       
       toast({
         title: "Wallet Connected",
@@ -167,14 +167,6 @@ export function useWallet() {
   // Check if wallet is connected
   const isConnected = Boolean(state.connection?.isConnected && state.connection?.address);
 
-  // Debug logging
-  console.log('[WALLET HOOK] State debug:', {
-    hasConnection: !!state.connection,
-    connectionIsConnected: state.connection?.isConnected,
-    connectionAddress: state.connection?.address,
-    derivedIsConnected: isConnected
-  });
-
   // Check for existing wallet connection on mount
   useEffect(() => {
     const checkExistingConnection = async () => {
@@ -202,7 +194,7 @@ export function useWallet() {
             }));
             
             // Fetch balances for the existing connection
-            await fetchBalances(accounts[0]);
+            fetchBalances(accounts[0]);
           }
         } catch (error) {
           console.error('[WALLET HOOK] Failed to check existing connection:', error);
@@ -211,7 +203,7 @@ export function useWallet() {
     };
     
     checkExistingConnection();
-  }, []);
+  }, [fetchBalances]);
 
   // Auto-fetch balances when connection changes
   useEffect(() => {

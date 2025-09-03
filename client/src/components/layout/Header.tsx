@@ -6,12 +6,20 @@ import { CreateWalletModal } from "@/components/wallet/CreateWalletModal";
 import { Wallet, Settings } from "lucide-react";
 
 export function Header() {
-  const { connection, isConnecting, disconnect } = useWallet();
+  const { connection, isConnecting, isConnected, disconnect } = useWallet();
+  
+  // Debug log to check wallet state
+  console.log('[HEADER] Wallet state:', { 
+    hasConnection: !!connection, 
+    address: connection?.address,
+    isConnected: connection?.isConnected,
+    derivedIsConnected: isConnected
+  });
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showCreateWalletModal, setShowCreateWalletModal] = useState(false);
 
   const handleWalletClick = () => {
-    if (connection?.isConnected) {
+    if (isConnected && connection?.address) {
       // Could show wallet menu or disconnect
       disconnect();
     } else {
@@ -78,7 +86,7 @@ export function Header() {
                     <span className="text-sm font-medium">
                       {isConnecting 
                         ? "Connecting..." 
-                        : connection?.isConnected 
+                        : (isConnected && connection?.address)
                           ? `${connection.address.slice(0, 6)}...${connection.address.slice(-4)}`
                           : "Connect Wallet"
                       }
