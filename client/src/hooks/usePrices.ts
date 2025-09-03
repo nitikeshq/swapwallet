@@ -20,11 +20,14 @@ export function usePrices() {
       console.log('[PRICES HOOK] Fetching YHT price...');
       const result = await pancakeSwapService.getCurrentPrice('YHT/USDT');
       
+      // Fetch real 24h data from PancakeSwap API
+      const real24hData = await pancakeSwapService.get24hData('0x3279eF4614f241a389114c77cdd28b70fca9537a');
+      
       const priceData: PriceData = {
         price: result.price,
         change24h: result.change24h,
-        volume24h: '1200000', // TODO: Get from API
-        liquidity: '850000', // TODO: Get from API
+        volume24h: real24hData.volume24h,
+        liquidity: real24hData.liquidity,
         lastUpdated: new Date(),
       };
       

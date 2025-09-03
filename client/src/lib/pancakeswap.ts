@@ -168,7 +168,7 @@ export class PancakeSwapService {
     }
   }
 
-  // Get current price from pool
+  // Get current price from pool with real-time data
   async getCurrentPrice(tokenPair: string): Promise<{ price: string; change24h: string }> {
     try {
       if (tokenPair === 'YHT/USDT') {
@@ -193,9 +193,12 @@ export class PancakeSwapService {
         
         console.log('[PANCAKESWAP] YHT/USDT price fetched:', price);
         
+        // Get 24h change from PancakeSwap API
+        const change24h = await this.get24hPriceChange(TOKENS.YHT.address);
+        
         return {
           price,
-          change24h: '+12.5', // TODO: Calculate actual 24h change
+          change24h,
         };
       }
 
@@ -204,6 +207,91 @@ export class PancakeSwapService {
     } catch (error) {
       console.error('[PANCAKESWAP ERROR] Failed to get current price:', error);
       throw error;
+    }
+  }
+
+  // Get 24-hour data from PancakeSwap API
+  async get24hData(tokenAddress: string): Promise<{
+    volume24h: string;
+    liquidity: string;
+    change24h: string;
+  }> {
+    try {
+      console.log('[PANCAKESWAP API] Fetching 24h data for:', tokenAddress);
+      
+      // Fetch from PancakeSwap API v2
+      const [tokensResponse, pairsResponse] = await Promise.all([
+        fetch('https://api.pancakeswap.info/api/v2/tokens'),
+        fetch('https://api.pancakeswap.info/api/v2/pairs')
+      ]);
+      
+      if (!tokensResponse.ok || !pairsResponse.ok) {
+        throw new Error('Failed to fetch from PancakeSwap API');
+      }
+      
+      const tokensData = await tokensResponse.json();
+      const pairsData = await pairsResponse.json();
+      
+      // Find token data
+      const tokenData = tokensData.data[tokenAddress.toLowerCase()];
+      
+      // Find YHT/USDT pair
+      const yhtUsdtPair = Object.values(pairsData.data).find((pair: any) => {
+        const token0 = pair.token0?.address?.toLowerCase();
+        const token1 = pair.token1?.address?.toLowerCase();
+        const yhtAddr = TOKENS.YHT.address.toLowerCase();
+        const usdtAddr = TOKENS.USDT.address.toLowerCase();
+        
+        return (token0 === yhtAddr && token1 === usdtAddr) ||
+               (token0 === usdtAddr && token1 === yhtAddr);
+      }) as any;
+      
+      const volume24h = yhtUsdtPair?.volume_24h || '0';
+      const liquidity = yhtUsdtPair?.liquidity_usd || '0';
+      const change24h = tokenData?.price_change_24h || '0';
+      
+      console.log('[PANCAKESWAP API] 24h data fetched:', {
+        volume24h,
+        liquidity,
+        change24h
+      });
+      
+      return {
+        volume24h: parseFloat(volume24h).toFixed(0),
+        liquidity: parseFloat(liquidity).toFixed(0),
+        change24h: parseFloat(change24h) >= 0 ? `+${parseFloat(change24h).toFixed(2)}` : parseFloat(change24h).toFixed(2)
+      };
+    } catch (error) {
+      console.error('[PANCAKESWAP API ERROR] Failed to fetch 24h data:', error);
+      // Return fallback data
+      return {
+        volume24h: '0',
+        liquidity: '0',
+        change24h: '0'
+      };
+    }
+  }
+
+  // Get 24-hour price change
+  private async get24hPriceChange(tokenAddress: string): Promise<string> {
+    try {
+      const response = await fetch('https://api.pancakeswap.info/api/v2/tokens');
+      if (!response.ok) {
+        throw new Error('Failed to fetch token data');
+      }
+      
+      const data = await response.json();
+      const tokenData = data.data[tokenAddress.toLowerCase()];
+      
+      if (tokenData && tokenData.price_change_24h) {
+        const change = parseFloat(tokenData.price_change_24h);
+        return change >= 0 ? `+${change.toFixed(2)}` : change.toFixed(2);
+      }
+      
+      return '0';
+    } catch (error) {
+      console.error('[PANCAKESWAP API ERROR] Failed to get 24h change:', error);
+      return '0';
     }
   }
 
