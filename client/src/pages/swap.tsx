@@ -20,10 +20,11 @@ export default function SwapPage() {
 
   // Handle View Chart button click
   const handleViewChart = () => {
-    const yhtUsdtPair = "YHT_USDT";
-    const tradingViewUrl = `https://www.tradingview.com/chart/?symbol=PANCAKESWAP:${yhtUsdtPair}`;
-    window.open(tradingViewUrl, '_blank');
-    console.log('[SWAP PAGE] Opening TradingView chart for YHT/USDT');
+    // Direct link to YHT/USDT pool on PancakeSwap using the actual pool address
+    const poolAddress = "0x6fd64bd3c577b9613ee293d38e6018536d05c799";
+    const pancakeSwapPoolUrl = `https://pancakeswap.finance/info/v3/pairs/${poolAddress}`;
+    window.open(pancakeSwapPoolUrl, '_blank');
+    console.log('[SWAP PAGE] Opening PancakeSwap pool chart for YHT/USDT:', poolAddress);
   };
 
   // Handle Referrals button click
