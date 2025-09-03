@@ -1,0 +1,111 @@
+Frontend Requirements
+Core Technologies
+React 18+ with TypeScript for type safety
+Vite for fast development and building
+Tailwind CSS for styling with custom design system
+shadcn/ui component library for consistent UI elements
+TanStack Query for server state management and caching
+Wouter for lightweight client-side routing
+Web3 Integration
+ethers.js v6 for blockchain interactions
+MetaMask/WalletConnect support for wallet connections
+BSC (Binance Smart Chain) network integration
+PancakeSwap SDK for DEX operations and price fetching
+UI Components Needed
+Wallet connection modal with network switching
+Token swap interface with real-time price updates
+Portfolio dashboard with token balances
+Transaction history with BSC Explorer links
+Price charts with multiple timeframes
+Referral system with shareable links
+Settings panel for slippage tolerance
+Loading states and error handling
+Mobile-responsive design
+Backend Requirements
+Server Technology
+Node.js with Express.js framework
+TypeScript for type safety across stack
+RESTful API design with JSON responses
+Database
+PostgreSQL with Neon serverless hosting
+Drizzle ORM for type-safe database operations
+Database schema for:
+Users (wallet addresses, referral codes)
+Transactions (swaps, status, amounts)
+Referral earnings and commissions
+App configuration settings
+API Endpoints
+User management (create, get by wallet)
+Transaction recording and history
+Referral system tracking
+Price data aggregation from multiple sources
+Analytics and statistics
+Blockchain Requirements
+Smart Contract Integration
+PancakeSwap V2 Router contract interactions
+ERC-20 token contract operations (YHT, USDT)
+Gas estimation and transaction handling
+Slippage protection and deadline management
+Price Data Sources
+PancakeSwap direct contract calls for reserves
+DexScreener API for price and volume data
+CoinGecko API as backup price source
+Real-time updates every 30 seconds
+Security & Best Practices
+Frontend Security
+Input validation for all user inputs
+Error boundaries to prevent crashes
+Rate limiting for API calls
+Wallet signature verification
+Backend Security
+CORS configuration for cross-origin requests
+Request validation using Zod schemas
+Environment variables for sensitive data
+Database transaction safety
+Performance Requirements
+Optimization
+Code splitting with dynamic imports
+Image optimization for token logos
+Caching strategies for API responses
+Lazy loading for heavy components
+Bundle size optimization
+Real-time Features
+WebSocket connections for live price updates
+Automatic balance refreshing after transactions
+Transaction status polling until confirmation
+External Services & APIs
+Required Integrations
+BSC RPC endpoints for blockchain data
+PancakeSwap subgraph for pool information
+Token logo APIs (CoinMarketCap, CoinGecko)
+BSCScan API for transaction verification
+Optional Enhancements
+Push notifications for price alerts
+Email notifications for referral earnings
+Social sharing for referral links
+Analytics tracking (Google Analytics)
+Development Tools
+Essential Tools
+ESLint + Prettier for code formatting
+Git for version control
+Environment management (.env files)
+Testing framework (Jest, React Testing Library)
+Deployment
+Vercel/Netlify for frontend hosting
+Railway/Heroku for backend deployment
+Neon for PostgreSQL database
+CDN for static assets
+UI/UX Design Requirements
+Design System
+Dark theme with modern gradient backgrounds
+Consistent color palette (grays, blues, cyans)
+Typography scale with proper font weights
+Spacing system using Tailwind utilities
+Component variants for different states
+User Experience
+One-click wallet connection
+Clear transaction confirmations
+Loading states for all async operations
+Error messages with actionable solutions
+Mobile-first responsive design
+Accessibility compliance (WCAG guidelines)

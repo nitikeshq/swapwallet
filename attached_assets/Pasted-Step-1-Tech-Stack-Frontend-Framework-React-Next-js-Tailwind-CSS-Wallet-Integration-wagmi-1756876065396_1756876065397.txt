@@ -1,0 +1,196 @@
+Step 1 — Tech Stack
+Frontend
+
+Framework → React + Next.js + Tailwind CSS
+
+Wallet Integration → wagmi
+ + RainbowKit
+
+Swap Functionality → PancakeSwap SDK
+
+Styling → Tailwind + shadcn/ui for clean UI components
+
+Backend (Optional but recommended)
+
+Node.js + Express for:
+
+Price caching
+
+Transaction logging
+
+Analytics
+
+Step 2 — PancakeSwap SDK Setup
+
+Install dependencies:
+
+npm install @pancakeswap/sdk @pancakeswap-libs/sdk ethers wagmi viem
+
+
+We’ll use:
+
+Router Address (V2) → 0x10ED43C718714eb63d5aA57B78B54704E256024E
+
+Factory Address (V2) → 0xCA143Ce32Fe78f1f7019d7d551a6402fC5350c73
+
+USDT Token Address (BSC) → 0x55d398326f99059fF775485246999027B3197955
+
+Your Token Address → 0x3279eF4614f241a389114C77CdD28b70fcA9537a
+
+Liquidity Pool Address → 0x6fd64bd3c577b9613ee293d38e6018536d05c799
+
+Step 3 — Platform Features
+1. Connect Wallet
+
+Users can connect MetaMask, TrustWallet, or WalletConnect.
+
+2. Show Live Price
+
+Use the PancakeSwap SDK to fetch pool reserves and calculate:
+
+1 USDT → Token
+
+1 Token → USDT
+
+3. Buy Token
+
+Approve USDT → Router
+
+Call swapExactTokensForTokensSupportingFeeOnTransferTokens
+
+4. Sell Token
+
+Approve Token → Router
+
+Call the same swap function but reversed.
+
+Step 4 — Example React Code
+
+Here’s a starting point for your buy/sell UI:
+
+SwapComponent.jsx
+import React, { useState, useEffect } from "react";
+import { ethers } from "ethers";
+import {
+  ChainId,
+  Token,
+  Fetcher,
+  Route,
+  Trade,
+  TokenAmount,
+  TradeType,
+  Percent
+} from "@pancakeswap/sdk";
+
+const SwapComponent = () => {
+  const [account, setAccount] = useState(null);
+  const [usdtAmount, setUsdtAmount] = useState("");
+  const [tokenAmount, setTokenAmount] = useState("");
+  const [price, setPrice] = useState("0");
+
+  // BSC Mainnet
+  const chainId = ChainId.MAINNET;
+  const USDT = new Token(chainId, "0x55d398326f99059fF775485246999027B3197955", 18);
+  const MYTOKEN = new Token(chainId, "0x3279eF4614f241a389114C77CdD28b70fcA9537a", 18);
+
+  // Connect Wallet
+  const connectWallet = async () => {
+    if (window.ethereum) {
+      const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+      setAccount(accounts[0]);
+    } else {
+      alert("Please install MetaMask!");
+    }
+  };
+
+  // Fetch Live Price
+  const fetchPrice = async () => {
+    const pair = await Fetcher.fetchPairData(USDT, MYTOKEN);
+    const route = new Route([pair], USDT);
+    setPrice(route.midPrice.toSignificant(6));
+  };
+
+  // Handle Input
+  const handleUsdtChange = (e) => {
+    setUsdtAmount(e.target.value);
+    setTokenAmount((e.target.value / price).toFixed(4));
+  };
+
+  useEffect(() => {
+    fetchPrice();
+  }, []);
+
+  return (
+    <div className="flex flex-col items-center p-6 max-w-md mx-auto bg-white rounded-2xl shadow-lg">
+      <h1 className="text-2xl font-bold mb-4">Buy / Sell Token</h1>
+
+      {!account ? (
+        <button
+          onClick={connectWallet}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700"
+        >
+          Connect Wallet
+        </button>
+      ) : (
+        <p className="mb-4">Connected: {account.slice(0, 6)}...{account.slice(-4)}</p>
+      )}
+
+      <div className="w-full">
+        <label className="block text-gray-700">USDT Amount</label>
+        <input
+          type="number"
+          value={usdtAmount}
+          onChange={handleUsdtChange}
+          className="w-full px-3 py-2 border rounded-lg focus:outline-none"
+          placeholder="Enter USDT"
+        />
+
+        <label className="block text-gray-700 mt-4">Token Amount</label>
+        <input
+          type="text"
+          value={tokenAmount}
+          readOnly
+          className="w-full px-3 py-2 border rounded-lg bg-gray-100 focus:outline-none"
+        />
+      </div>
+
+      <button
+        className="mt-6 w-full px-4 py-2 bg-green-600 text-white rounded-lg shadow-md hover:bg-green-700"
+      >
+        Buy Token
+      </button>
+
+      <button
+        className="mt-3 w-full px-4 py-2 bg-red-600 text-white rounded-lg shadow-md hover:bg-red-700"
+      >
+        Sell Token
+      </button>
+
+      <p className="mt-4 text-gray-500">1 USDT ≈ {price} TOKEN</p>
+    </div>
+  );
+};
+
+export default SwapComponent;
+
+Step 5 — Deployment
+
+Testnet First → Use BSC Testnet to verify swaps.
+
+Deploy Frontend → Vercel / Netlify.
+
+Domain → Use a branded domain.
+
+Security → Use HTTPS & verify contract addresses.
+
+Step 6 — Optional Features
+
+✅ Show price charts (via TradingView API)
+
+✅ Add slippage tolerance
+
+✅ Gas fee estimator
+
+✅ Recent trades & analytics
+
+✅ Fiat on-ramp integration (MoonPay / Transak)
