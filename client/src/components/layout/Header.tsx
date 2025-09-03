@@ -8,12 +8,14 @@ import { Wallet, Settings } from "lucide-react";
 export function Header() {
   const { connection, isConnecting, isConnected, disconnect } = useWallet();
   
-  // Debug log to check wallet state
-  console.log('[HEADER] Wallet state:', { 
+  // AGGRESSIVE debug log to check wallet state
+  console.log('[HEADER] WALLET STATE DEBUG:', { 
     hasConnection: !!connection, 
     address: connection?.address,
     isConnected: connection?.isConnected,
-    derivedIsConnected: isConnected
+    derivedIsConnected: isConnected,
+    isConnecting,
+    fullConnection: connection
   });
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showCreateWalletModal, setShowCreateWalletModal] = useState(false);

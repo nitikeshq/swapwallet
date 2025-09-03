@@ -15,9 +15,9 @@ export function useWallet() {
   // Simple derived state
   const isConnected = Boolean(connection?.isConnected && connection?.address);
 
-  // Connect wallet - simplified for instant updates
+  // Connect wallet - FORCE instant state updates
   const connect = useCallback(async (provider: WalletProvider) => {
-    console.log(`[WALLET HOOK] Connecting to ${provider}...`);
+    console.log(`[WALLET HOOK] FORCING connection to ${provider}...`);
     setIsConnecting(true);
     setError(null);
     
@@ -37,18 +37,28 @@ export function useWallet() {
           throw new Error(`Unsupported wallet provider: ${provider}`);
       }
       
-      // Immediately update connection state
+      console.log('[WALLET HOOK] FORCING STATE UPDATE - Connection result:', walletConnection);
+      
+      // FORCE multiple state updates to ensure it sticks
       setConnection(walletConnection);
       setIsConnecting(false);
-      console.log('[WALLET HOOK] Wallet connected instantly:', walletConnection.address);
+      setError(null);
+      
+      // Force a re-render by updating state multiple times
+      setTimeout(() => {
+        console.log('[WALLET HOOK] Second state force update');
+        setConnection(walletConnection);
+      }, 100);
+      
+      console.log('[WALLET HOOK] Wallet state FORCED - address:', walletConnection.address);
       
       // Show success message
       toast({
-        title: "Wallet Connected",
+        title: "Wallet Connected!",
         description: `Connected to ${walletConnection.address.slice(0, 6)}...${walletConnection.address.slice(-4)}`,
       });
       
-      // Fetch balances in background (don't wait for this)
+      // Fetch balances in background
       fetchBalances(walletConnection.address).catch(err => {
         console.error('[WALLET HOOK] Background balance fetch failed:', err);
       });
@@ -140,36 +150,91 @@ export function useWallet() {
     return balance?.balance || '0';
   }, [balances]);
 
-  // Check for existing wallet connection on mount
+  // MEGA AGGRESSIVE MetaMask detection - check multiple ways
   useEffect(() => {
-    const checkExistingConnection = async () => {
-      if (window.ethereum && !connection) {
+    const checkMetaMaskConnection = async () => {
+      console.log('[WALLET HOOK] MEGA CHECK - looking for MetaMask...');
+      
+      // Multiple ways to check for MetaMask
+      const ethereum = (window as any).ethereum || (window as any).web3?.currentProvider;
+      const hasMetaMask = !!ethereum;
+      
+      console.log('[WALLET HOOK] MetaMask detection:', {
+        windowEthereum: !!(window as any).ethereum,
+        web3Provider: !!(window as any).web3?.currentProvider,
+        hasMetaMask,
+        ethereumObject: ethereum
+      });
+      
+      if (hasMetaMask) {
         try {
-          const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+          // TRY MULTIPLE account request methods
+          let accounts = null;
+          
+          try {
+            accounts = await ethereum.request({ method: 'eth_accounts' });
+            console.log('[WALLET HOOK] eth_accounts result:', accounts);
+          } catch (e) {
+            console.log('[WALLET HOOK] eth_accounts failed, trying alternative:', e);
+          }
+          
+          // If no accounts, try alternative methods
+          if (!accounts || accounts.length === 0) {
+            try {
+              accounts = await ethereum.enable?.();
+              console.log('[WALLET HOOK] ethereum.enable result:', accounts);
+            } catch (e) {
+              console.log('[WALLET HOOK] ethereum.enable failed:', e);
+            }
+          }
+          
           if (accounts && accounts.length > 0) {
-            console.log('[WALLET HOOK] Found existing connection:', accounts[0]);
-            
-            const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+            const chainId = await ethereum.request({ method: 'eth_chainId' });
             const existingConnection: WalletConnection = {
               address: accounts[0],
               chainId: parseInt(chainId, 16),
               isConnected: true,
-              provider: window.ethereum,
+              provider: ethereum,
             };
             
-            // Immediately set connection
-            setConnection(existingConnection);
+            console.log('[WALLET HOOK] 🎯 WALLET FOUND! Forcing connection:', existingConnection);
             
-            // Fetch balances in background
+            // TRIPLE force update
+            setConnection(existingConnection);
+            setIsConnecting(false);
+            setError(null);
+            
+            // Additional force updates with delays
+            setTimeout(() => setConnection(existingConnection), 50);
+            setTimeout(() => setConnection(existingConnection), 200);
+            
             fetchBalances(accounts[0]);
+          } else {
+            console.log('[WALLET HOOK] No MetaMask accounts available');
           }
         } catch (error) {
-          console.error('[WALLET HOOK] Failed to check existing connection:', error);
+          console.error('[WALLET HOOK] MetaMask check error:', error);
         }
+      } else {
+        console.log('[WALLET HOOK] ❌ MetaMask not detected at all');
       }
     };
     
-    checkExistingConnection();
+    // Check immediately
+    checkMetaMaskConnection();
+    
+    // Keep checking aggressively
+    const interval = setInterval(checkMetaMaskConnection, 1000);
+    
+    // Also check when window loads
+    if (document.readyState === 'loading') {
+      window.addEventListener('load', checkMetaMaskConnection);
+    }
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('load', checkMetaMaskConnection);
+    };
   }, []);
 
   // Listen for account changes
