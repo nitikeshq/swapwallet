@@ -103,16 +103,22 @@ export class WalletService {
       console.log('[WALLET] MetaMask connected successfully:', connection.address);
       return connection;
     } catch (error: any) {
-      console.error('[WALLET ERROR] MetaMask connection failed:', error);
+      console.error('[WALLET ERROR] MetaMask connection failed - Full error:', error);
+      console.error('[WALLET ERROR] Error type:', typeof error);
+      console.error('[WALLET ERROR] Error keys:', Object.keys(error || {}));
+      
       // Provide better error messages
-      if (error.code === 4001) {
+      if (error && error.code === 4001) {
         throw new Error('Connection rejected by user');
-      } else if (error.code === -32002) {
+      } else if (error && error.code === -32002) {
         throw new Error('Connection request already pending');
-      } else if (error.message) {
+      } else if (error && error.message && typeof error.message === 'string') {
         throw new Error(error.message);
       } else {
-        throw new Error('Failed to connect to MetaMask. Please try again.');
+        // Default error with more context
+        const errorMsg = `Failed to connect to MetaMask. Error details: ${JSON.stringify(error)}`;
+        console.error('[WALLET ERROR] Throwing error:', errorMsg);
+        throw new Error(errorMsg);
       }
     }
   }

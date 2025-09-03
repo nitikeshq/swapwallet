@@ -80,17 +80,21 @@ export function useWallet() {
       
       console.log(`[WALLET HOOK] ${provider} connected successfully:`, connection.address);
     } catch (error: any) {
-      console.error(`[WALLET HOOK] ${provider} connection failed:`, error);
+      console.error(`[WALLET HOOK] ${provider} connection failed - Full error:`, error);
+      console.error(`[WALLET HOOK] Error type:`, typeof error);
+      console.error(`[WALLET HOOK] Error message:`, error?.message);
+      
+      const errorMessage = error?.message || `Failed to connect to ${provider}. Please try again.`;
       
       setState(prev => ({ 
         ...prev, 
         isConnecting: false, 
-        error: error.message 
+        error: errorMessage 
       }));
       
       toast({
-        title: "Connection Failed",
-        description: error.message,
+        title: "Connection Failed", 
+        description: errorMessage,
         variant: "destructive",
       });
     }
