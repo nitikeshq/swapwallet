@@ -134,7 +134,29 @@ export function PortfolioSummary() {
           
           {/* Token Balances */}
           <div className="space-y-3">
-            {portfolioData.map((token) => (
+            {!connection?.address ? (
+              <div className="text-center py-6" data-testid="connect-wallet-message">
+                <div className="w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Wallet className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <p className="text-muted-foreground">Connect your wallet to view token balances</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Your YHT, USDT, and BNB balances will appear here
+                </p>
+              </div>
+            ) : portfolioData.length === 0 ? (
+              <div className="text-center py-6" data-testid="loading-balances">
+                <div className="w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <RefreshCw className={`h-8 w-8 text-muted-foreground ${isLoading ? 'animate-spin' : ''}`} />
+                </div>
+                <p className="text-muted-foreground">
+                  {isLoading ? 'Loading balances...' : 'No tokens found'}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Make sure you're connected to BSC network
+                </p>
+              </div>
+            ) : portfolioData.map((token) => (
               <div 
                 key={token.symbol}
                 className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"

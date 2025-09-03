@@ -18,6 +18,23 @@ export default function SwapPage() {
     bnbPrice: bnbPrice?.price 
   });
 
+  // Handle View Chart button click
+  const handleViewChart = () => {
+    const yhtUsdtPair = "YHT_USDT";
+    const tradingViewUrl = `https://www.tradingview.com/chart/?symbol=PANCAKESWAP:${yhtUsdtPair}`;
+    window.open(tradingViewUrl, '_blank');
+    console.log('[SWAP PAGE] Opening TradingView chart for YHT/USDT');
+  };
+
+  // Handle Referrals button click
+  const handleViewReferrals = () => {
+    const referralSection = document.querySelector('[data-section="referrals"]');
+    if (referralSection) {
+      referralSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      console.log('[SWAP PAGE] Scrolling to referrals section');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -32,7 +49,11 @@ export default function SwapPage() {
             
             {/* Quick Actions */}
             <div className="grid grid-cols-2 gap-4">
-              <Card className="glass-card hover:bg-muted/20 transition-colors cursor-pointer group">
+              <Card 
+                className="glass-card hover:bg-muted/20 transition-colors cursor-pointer group"
+                onClick={handleViewChart}
+                data-testid="view-chart-button"
+              >
                 <CardContent className="p-4 text-center">
                   <div className="w-12 h-12 bg-accent/20 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:bg-accent/30 transition-colors">
                     <TrendingUp className="h-6 w-6 text-accent" />
@@ -42,7 +63,11 @@ export default function SwapPage() {
                 </CardContent>
               </Card>
               
-              <Card className="glass-card hover:bg-muted/20 transition-colors cursor-pointer group">
+              <Card 
+                className="glass-card hover:bg-muted/20 transition-colors cursor-pointer group"
+                onClick={handleViewReferrals}
+                data-testid="referrals-button"
+              >
                 <CardContent className="p-4 text-center">
                   <div className="w-12 h-12 bg-accent/20 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:bg-accent/30 transition-colors">
                     <Users className="h-6 w-6 text-accent" />
@@ -57,7 +82,9 @@ export default function SwapPage() {
           {/* Sidebar */}
           <div className="space-y-6">
             <PortfolioSummary />
-            <ReferralProgram />
+            <div data-section="referrals">
+              <ReferralProgram />
+            </div>
           </div>
         </div>
       </main>
