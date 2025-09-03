@@ -3,97 +3,65 @@ import { walletService } from '@/lib/wallet';
 import { useToast } from '@/hooks/use-toast';
 import type { WalletConnection, TokenBalance, WalletProvider, CreateWalletResult } from '@/types/wallet';
 
-interface WalletState {
-  connection: WalletConnection | null;
-  balances: TokenBalance[];
-  isConnecting: boolean;
-  isLoading: boolean;
-  error: string | null;
-}
-
 export function useWallet() {
-  const [state, setState] = useState<WalletState>({
-    connection: null,
-    balances: [],
-    isConnecting: false,
-    isLoading: false,
-    error: null,
-  });
+  const [connection, setConnection] = useState<WalletConnection | null>(null);
+  const [balances, setBalances] = useState<TokenBalance[]>([]);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const { toast } = useToast();
 
-  // Connect wallet
+  // Simple derived state
+  const isConnected = Boolean(connection?.isConnected && connection?.address);
+
+  // Connect wallet - simplified for instant updates
   const connect = useCallback(async (provider: WalletProvider) => {
-    setState(prev => ({ ...prev, isConnecting: true, error: null }));
+    console.log(`[WALLET HOOK] Connecting to ${provider}...`);
+    setIsConnecting(true);
+    setError(null);
     
     try {
-      console.log(`[WALLET HOOK] Connecting to ${provider}...`);
-      
-      let connection: WalletConnection;
+      let walletConnection: WalletConnection;
       
       switch (provider) {
         case 'metamask':
-          connection = await walletService.connectMetaMask();
+          walletConnection = await walletService.connectMetaMask();
           break;
         case 'walletconnect':
-          // TODO: Implement WalletConnect
           throw new Error('WalletConnect not implemented yet');
         case 'trustwallet':
-          // Trust Wallet uses the same interface as MetaMask
-          connection = await walletService.connectMetaMask();
+          walletConnection = await walletService.connectMetaMask();
           break;
         default:
           throw new Error(`Unsupported wallet provider: ${provider}`);
       }
       
-      // This will be handled in the balance fetching section above
+      // Immediately update connection state
+      setConnection(walletConnection);
+      setIsConnecting(false);
+      console.log('[WALLET HOOK] Wallet connected instantly:', walletConnection.address);
       
-      // Fetch balances after connection
-      try {
-        console.log('[WALLET HOOK] Fetching balances after connection...');
-        const balances = await walletService.getTokenBalances(connection.address);
-        
-        setState(prev => ({ 
-          ...prev, 
-          connection, 
-          balances,
-          isConnecting: false,
-          error: null 
-        }));
-        
-        console.log('[WALLET HOOK] Connection and balances updated successfully');
-      } catch (balanceError) {
-        console.error('[WALLET HOOK] Failed to fetch balances after connection:', balanceError);
-        // Still set the connection even if balance fetch fails
-        setState(prev => ({ 
-          ...prev, 
-          connection, 
-          isConnecting: false,
-          error: null 
-        }));
-      }
-      
+      // Show success message
       toast({
         title: "Wallet Connected",
-        description: `Successfully connected to ${provider}`,
+        description: `Connected to ${walletConnection.address.slice(0, 6)}...${walletConnection.address.slice(-4)}`,
       });
       
-      console.log(`[WALLET HOOK] ${provider} connected successfully:`, connection.address);
+      // Fetch balances in background (don't wait for this)
+      fetchBalances(walletConnection.address).catch(err => {
+        console.error('[WALLET HOOK] Background balance fetch failed:', err);
+      });
+      
     } catch (error: any) {
-      console.error(`[WALLET HOOK] ${provider} connection failed - Full error:`, error);
-      console.error(`[WALLET HOOK] Error type:`, typeof error);
-      console.error(`[WALLET HOOK] Error message:`, error?.message);
+      console.error(`[WALLET HOOK] ${provider} connection failed:`, error);
+      const errorMessage = error?.message || `Failed to connect to ${provider}`;
       
-      const errorMessage = error?.message || `Failed to connect to ${provider}. Please try again.`;
-      
-      setState(prev => ({ 
-        ...prev, 
-        isConnecting: false, 
-        error: errorMessage 
-      }));
+      setIsConnecting(false);
+      setError(errorMessage);
       
       toast({
-        title: "Connection Failed", 
+        title: "Connection Failed",
         description: errorMessage,
         variant: "destructive",
       });
@@ -104,13 +72,11 @@ export function useWallet() {
   const disconnect = useCallback(() => {
     console.log('[WALLET HOOK] Disconnecting wallet...');
     
-    setState({
-      connection: null,
-      balances: [],
-      isConnecting: false,
-      isLoading: false,
-      error: null,
-    });
+    setConnection(null);
+    setBalances([]);
+    setIsConnecting(false);
+    setIsLoading(false);
+    setError(null);
     
     toast({
       title: "Wallet Disconnected",
@@ -146,85 +112,56 @@ export function useWallet() {
 
   // Fetch token balances
   const fetchBalances = useCallback(async (address?: string) => {
-    const walletAddress = address || state.connection?.address;
+    const walletAddress = address || connection?.address;
     
     if (!walletAddress) {
       console.warn('[WALLET HOOK] No wallet address available for balance fetch');
       return;
     }
     
-    setState(prev => ({ ...prev, isLoading: true }));
+    setIsLoading(true);
     
     try {
       console.log('[WALLET HOOK] Fetching balances for:', walletAddress);
+      const tokenBalances = await walletService.getTokenBalances(walletAddress);
       
-      const balances = await walletService.getTokenBalances(walletAddress);
-      
-      setState(prev => ({ 
-        ...prev, 
-        balances, 
-        isLoading: false,
-        error: null 
-      }));
-      
-      console.log('[WALLET HOOK] Balances updated:', balances);
+      setBalances(tokenBalances);
+      setIsLoading(false);
+      console.log('[WALLET HOOK] Balances updated:', tokenBalances);
     } catch (error: any) {
       console.error('[WALLET HOOK] Balance fetch failed:', error);
-      
-      setState(prev => ({ 
-        ...prev, 
-        isLoading: false, 
-        error: error.message 
-      }));
+      setIsLoading(false);
     }
-  }, []);
+  }, [connection?.address]);
 
   // Get balance for specific token
   const getTokenBalance = useCallback((tokenSymbol: string): string => {
-    const balance = state.balances.find(b => b.symbol === tokenSymbol);
+    const balance = balances.find(b => b.symbol === tokenSymbol);
     return balance?.balance || '0';
-  }, [state.balances]);
-
-  // Check if wallet is connected
-  const isConnected = Boolean(state.connection?.isConnected && state.connection?.address);
+  }, [balances]);
 
   // Check for existing wallet connection on mount
   useEffect(() => {
     const checkExistingConnection = async () => {
-      if (window.ethereum && !state.connection) {
+      if (window.ethereum && !connection) {
         try {
           const accounts = await window.ethereum.request({ method: 'eth_accounts' });
           if (accounts && accounts.length > 0) {
             console.log('[WALLET HOOK] Found existing connection:', accounts[0]);
             
-            // Get current chain ID
             const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-            const numericChainId = parseInt(chainId, 16);
-            
-            // Recreate connection state
             const existingConnection: WalletConnection = {
               address: accounts[0],
-              chainId: numericChainId,
+              chainId: parseInt(chainId, 16),
               isConnected: true,
               provider: window.ethereum,
             };
             
-            setState(prev => ({
-              ...prev,
-              connection: existingConnection,
-            }));
+            // Immediately set connection
+            setConnection(existingConnection);
             
-            // Fetch balances
-            try {
-              const balances = await walletService.getTokenBalances(accounts[0]);
-              setState(prev => ({
-                ...prev,
-                connection: existingConnection,
-                balances,
-              }));
-            } catch (error) {
-              console.error('[WALLET HOOK] Failed to fetch balances on reconnect:', error);
-            }
+            // Fetch balances in background
+            fetchBalances(accounts[0]);
           }
         } catch (error) {
           console.error('[WALLET HOOK] Failed to check existing connection:', error);
@@ -241,20 +178,13 @@ export function useWallet() {
       const handleAccountsChanged = (accounts: string[]) => {
         if (accounts.length === 0) {
           disconnect();
-        } else if (state.connection && accounts[0] !== state.connection.address) {
-          // Account changed, update connection
-          setState(prev => ({
-            ...prev,
-            connection: prev.connection ? {
-              ...prev.connection,
-              address: accounts[0]
-            } : null
-          }));
+        } else if (connection && accounts[0] !== connection.address) {
+          // Account changed, update connection immediately
+          setConnection(prev => prev ? { ...prev, address: accounts[0] } : null);
         }
       };
 
-      const handleChainChanged = (chainId: string) => {
-        // Reload the page when chain changes for simplicity
+      const handleChainChanged = () => {
         window.location.reload();
       };
 
@@ -266,15 +196,15 @@ export function useWallet() {
         window.ethereum?.removeListener('chainChanged', handleChainChanged);
       };
     }
-  }, [state.connection, disconnect]);
+  }, [connection, disconnect]);
 
   return {
     // State
-    connection: state.connection,
-    balances: state.balances,
-    isConnecting: state.isConnecting,
-    isLoading: state.isLoading,
-    error: state.error,
+    connection,
+    balances,
+    isConnecting,
+    isLoading,
+    error,
     isConnected,
     
     // Actions
