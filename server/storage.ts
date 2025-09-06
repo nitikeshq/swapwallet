@@ -69,29 +69,41 @@ export class MemStorage implements IStorage {
     this.priceHistory = new Map();
     this.adminSettings = new Map();
     
-    // Initialize default admin settings
+    // Initialize default admin settings synchronously
     this.initializeDefaultSettings();
   }
 
-  private async initializeDefaultSettings() {
+  private initializeDefaultSettings() {
     // Set default YHT token contract address
-    await this.createOrUpdateAdminSetting({
+    const yhtSetting: AdminSetting = {
+      id: randomUUID(),
       settingKey: "YHT_CONTRACT_ADDRESS",
       settingValue: "0x3279eF4614f241a389114c77cdd28b70fca9537a",
-      description: "YHT Token Contract Address on BSC"
-    });
+      description: "YHT Token Contract Address on BSC",
+      updatedAt: new Date(),
+      createdAt: new Date(),
+    };
+    this.adminSettings.set("YHT_CONTRACT_ADDRESS", yhtSetting);
     
-    await this.createOrUpdateAdminSetting({
+    const usdtSetting: AdminSetting = {
+      id: randomUUID(),
       settingKey: "USDT_CONTRACT_ADDRESS", 
       settingValue: "0x55d398326f99059fF775485246999027B3197955",
-      description: "USDT Token Contract Address on BSC"
-    });
+      description: "USDT Token Contract Address on BSC",
+      updatedAt: new Date(),
+      createdAt: new Date(),
+    };
+    this.adminSettings.set("USDT_CONTRACT_ADDRESS", usdtSetting);
     
-    await this.createOrUpdateAdminSetting({
+    const lpSetting: AdminSetting = {
+      id: randomUUID(),
       settingKey: "LP_PAIR_ADDRESS",
       settingValue: "0x6fd64bd3c577b9613ee293d38e6018536d05c799",
-      description: "YHT/USDT LP Pair Address"
-    });
+      description: "YHT/USDT LP Pair Address",
+      updatedAt: new Date(),
+      createdAt: new Date(),
+    };
+    this.adminSettings.set("LP_PAIR_ADDRESS", lpSetting);
   }
 
   async getUser(walletAddress: string): Promise<User | undefined> {

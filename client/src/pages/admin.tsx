@@ -102,40 +102,76 @@ export default function AdminPage() {
     }
   };
 
-  // Fetch admin data
+  // Custom query function for admin endpoints that includes authentication
+  const adminQueryFn = async ({ queryKey }: { queryKey: any[] }) => {
+    const [url] = queryKey;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${password}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return response.json();
+  };
+
+  // Fetch admin data with authentication
   const { data: settings = [], refetch: refetchSettings } = useQuery<AdminSetting[]>({
     queryKey: ['/api/admin/settings'],
+    queryFn: adminQueryFn,
     enabled: isAuthenticated,
   });
 
   const { data: analytics } = useQuery<AdminAnalytics>({
     queryKey: ['/api/admin/analytics'],
+    queryFn: adminQueryFn,
     enabled: isAuthenticated,
   });
 
   const { data: users = [] } = useQuery<User[]>({
     queryKey: ['/api/admin/users'],
+    queryFn: adminQueryFn,
     enabled: isAuthenticated,
   });
 
   const { data: transactions = [] } = useQuery<Transaction[]>({
     queryKey: ['/api/admin/transactions'],
+    queryFn: adminQueryFn,
     enabled: isAuthenticated,
   });
 
   const { data: referrals = [] } = useQuery<Referral[]>({
     queryKey: ['/api/admin/referrals'],
+    queryFn: adminQueryFn,
     enabled: isAuthenticated,
   });
 
   // Update setting mutation
   const updateSettingMutation = useMutation({
     mutationFn: async ({ key, value, description }: { key: string; value: string; description?: string }) => {
-      return apiRequest('POST', '/api/admin/settings', {
-        settingKey: key,
-        settingValue: value,
-        description: description || null,
+      const response = await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${password}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          settingKey: key,
+          settingValue: value,
+          description: description || null,
+        }),
       });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/settings'] });
