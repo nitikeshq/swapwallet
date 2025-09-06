@@ -2,6 +2,14 @@
 
 This is a decentralized cryptocurrency swap application built for trading YHT (Yahoo Token) against USDT on the Binance Smart Chain. The application features a modern React frontend with TypeScript, integrated with PancakeSwap DEX for token swapping functionality. It includes wallet connectivity, real-time price tracking, portfolio management, and a referral program system.
 
+# Recent Changes
+
+**September 6, 2025** - Security improvements for admin system:
+- Moved admin password from hardcoded string to environment variable (ADMIN_PASSWORD)
+- Created comprehensive authentication middleware for admin routes
+- Applied authentication protection to all admin endpoints
+- Fixed Vite middleware interference with API routes (Note: Vite middleware catch-all route is overriding API authentication - requires further investigation)
+
 # User Preferences
 
 Preferred communication style: Simple, everyday language.

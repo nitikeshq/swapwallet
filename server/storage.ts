@@ -6,7 +6,9 @@ import {
   type Referral,
   type InsertReferral,
   type PriceHistory,
-  type InsertPriceHistory
+  type InsertPriceHistory,
+  type AdminSetting,
+  type InsertAdminSetting
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -34,6 +36,17 @@ export interface IStorage {
   getLatestPrice(tokenPair: string): Promise<PriceHistory | undefined>;
   createPriceEntry(priceEntry: InsertPriceHistory): Promise<PriceHistory>;
   getPriceHistory(tokenPair: string, hours: number): Promise<PriceHistory[]>;
+
+  // Admin settings
+  getAdminSetting(key: string): Promise<AdminSetting | undefined>;
+  createOrUpdateAdminSetting(setting: InsertAdminSetting): Promise<AdminSetting>;
+  getAllAdminSettings(): Promise<AdminSetting[]>;
+  
+  // Admin analytics
+  getAllUsers(): Promise<User[]>;
+  getAllTransactions(limit?: number): Promise<Transaction[]>;
+  getAllReferrals(limit?: number): Promise<Referral[]>;
+  getTotalProfit(): Promise<{ totalVolume: string; totalFees: string; totalCommissions: string; }>;
 }
 
 export class MemStorage implements IStorage {
@@ -44,6 +57,7 @@ export class MemStorage implements IStorage {
   private referrals: Map<string, Referral>;
   private referralsByUser: Map<string, Referral[]>;
   private priceHistory: Map<string, PriceHistory[]>;
+  private adminSettings: Map<string, AdminSetting>;
 
   constructor() {
     this.users = new Map();
@@ -53,6 +67,31 @@ export class MemStorage implements IStorage {
     this.referrals = new Map();
     this.referralsByUser = new Map();
     this.priceHistory = new Map();
+    this.adminSettings = new Map();
+    
+    // Initialize default admin settings
+    this.initializeDefaultSettings();
+  }
+
+  private async initializeDefaultSettings() {
+    // Set default YHT token contract address
+    await this.createOrUpdateAdminSetting({
+      settingKey: "YHT_CONTRACT_ADDRESS",
+      settingValue: "0x3279eF4614f241a389114c77cdd28b70fca9537a",
+      description: "YHT Token Contract Address on BSC"
+    });
+    
+    await this.createOrUpdateAdminSetting({
+      settingKey: "USDT_CONTRACT_ADDRESS", 
+      settingValue: "0x55d398326f99059fF775485246999027B3197955",
+      description: "USDT Token Contract Address on BSC"
+    });
+    
+    await this.createOrUpdateAdminSetting({
+      settingKey: "LP_PAIR_ADDRESS",
+      settingValue: "0x6fd64bd3c577b9613ee293d38e6018536d05c799",
+      description: "YHT/USDT LP Pair Address"
+    });
   }
 
   async getUser(walletAddress: string): Promise<User | undefined> {
@@ -242,6 +281,92 @@ export class MemStorage implements IStorage {
     return prices
       .filter(p => p.timestamp >= cutoffTime)
       .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+  }
+
+  // Admin settings methods
+  async getAdminSetting(key: string): Promise<AdminSetting | undefined> {
+    return this.adminSettings.get(key);
+  }
+
+  async createOrUpdateAdminSetting(insertSetting: InsertAdminSetting): Promise<AdminSetting> {
+    const existing = this.adminSettings.get(insertSetting.settingKey);
+    
+    const setting: AdminSetting = {
+      id: existing?.id || randomUUID(),
+      settingKey: insertSetting.settingKey,
+      settingValue: insertSetting.settingValue,
+      description: insertSetting.description || null,
+      updatedAt: new Date(),
+      createdAt: existing?.createdAt || new Date(),
+    };
+    
+    this.adminSettings.set(setting.settingKey, setting);
+    return setting;
+  }
+
+  async getAllAdminSettings(): Promise<AdminSetting[]> {
+    return Array.from(this.adminSettings.values())
+      .sort((a, b) => a.settingKey.localeCompare(b.settingKey));
+  }
+
+  // Admin analytics methods
+  async getAllUsers(): Promise<User[]> {
+    return Array.from(this.users.values())
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  async getAllTransactions(limit = 100): Promise<Transaction[]> {
+    const allTransactions: Transaction[] = [];
+    const userTxsArrays = Array.from(this.transactionsByUser.values());
+    for (const userTxs of userTxsArrays) {
+      allTransactions.push(...userTxs);
+    }
+    
+    return allTransactions
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, limit);
+  }
+
+  async getAllReferrals(limit = 100): Promise<Referral[]> {
+    const allReferrals: Referral[] = [];
+    const userReferralArrays = Array.from(this.referralsByUser.values());
+    for (const userReferrals of userReferralArrays) {
+      allReferrals.push(...userReferrals);
+    }
+    
+    return allReferrals
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, limit);
+  }
+
+  async getTotalProfit(): Promise<{ totalVolume: string; totalFees: string; totalCommissions: string; }> {
+    const allTransactions = await this.getAllTransactions(1000);
+    const allReferrals = await this.getAllReferrals(1000);
+    
+    let totalVolume = 0;
+    let totalFees = 0;
+    let totalCommissions = 0;
+    
+    // Calculate total trading volume and burning fees
+    for (const tx of allTransactions) {
+      const fromAmount = parseFloat(tx.fromAmount);
+      const burningFee = parseFloat(tx.burningFee || "0");
+      
+      totalVolume += fromAmount;
+      totalFees += burningFee;
+    }
+    
+    // Calculate total referral commissions
+    for (const referral of allReferrals) {
+      const commission = parseFloat(referral.commissionAmount);
+      totalCommissions += commission;
+    }
+    
+    return {
+      totalVolume: totalVolume.toString(),
+      totalFees: totalFees.toString(),
+      totalCommissions: totalCommissions.toString(),
+    };
   }
 }
 

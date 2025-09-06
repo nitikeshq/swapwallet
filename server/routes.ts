@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertUserSchema, insertTransactionSchema, insertReferralSchema, insertPriceHistorySchema } from "@shared/schema";
+import { insertUserSchema, insertTransactionSchema, insertReferralSchema, insertPriceHistorySchema, insertAdminSettingSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -185,6 +185,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ valid: true, referrer: user.walletAddress });
     } catch (error) {
       console.error("[API ERROR] Validate referral code:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Admin authentication middleware for login endpoint only
+  const adminAuthLogin = (req: any, res: any, next: any) => {
+    const { password } = req.body;
+    const adminPassword = process.env.ADMIN_PASSWORD || "Sohan@Rohan11";
+    
+    if (password !== adminPassword) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    next();
+  };
+
+  // Admin authentication middleware for all other protected routes
+  const adminAuth = (req: any, res: any, next: any) => {
+    const authHeader = req.headers.authorization;
+    const adminPassword = process.env.ADMIN_PASSWORD || "Sohan@Rohan11";
+    
+    // Check both Bearer token and basic auth
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+      
+      if (token === adminPassword) {
+        return next();
+      }
+    }
+    
+    // If no valid Bearer token, also check if password is passed in request body for all endpoints
+    const { password } = req.body || {};
+    if (password && password === adminPassword) {
+      return next();
+    }
+    
+    return res.status(401).json({ error: "Unauthorized - Invalid or missing admin credentials" });
+  };
+
+  // Admin routes
+  app.post("/api/admin/login", adminAuthLogin, (req, res) => {
+    res.json({ success: true, message: "Admin authenticated" });
+  });
+
+  app.get("/api/admin/settings", adminAuth, async (req, res) => {
+    try {
+      const settings = await storage.getAllAdminSettings();
+      res.json(settings);
+    } catch (error) {
+      console.error("[API ERROR] Get admin settings:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/admin/settings", adminAuth, async (req, res) => {
+    try {
+      const settingData = insertAdminSettingSchema.parse(req.body);
+      const setting = await storage.createOrUpdateAdminSetting(settingData);
+      
+      console.log("[API] Admin setting updated:", setting.settingKey);
+      res.json(setting);
+    } catch (error) {
+      console.error("[API ERROR] Update admin setting:", error);
+      res.status(400).json({ error: "Invalid setting data" });
+    }
+  });
+
+  app.get("/api/admin/users", adminAuth, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      res.json(users);
+    } catch (error) {
+      console.error("[API ERROR] Get all users:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/admin/transactions", adminAuth, async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const transactions = await storage.getAllTransactions(limit);
+      res.json(transactions);
+    } catch (error) {
+      console.error("[API ERROR] Get all transactions:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/admin/referrals", adminAuth, async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const referrals = await storage.getAllReferrals(limit);
+      res.json(referrals);
+    } catch (error) {
+      console.error("[API ERROR] Get all referrals:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/admin/analytics", adminAuth, async (req, res) => {
+    try {
+      const profit = await storage.getTotalProfit();
+      res.json(profit);
+    } catch (error) {
+      console.error("[API ERROR] Get admin analytics:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });

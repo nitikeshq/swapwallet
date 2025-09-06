@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import SwapPage from "@/pages/swap";
 import TermsPage from "@/pages/terms";
+import AdminPage from "@/pages/admin";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -13,6 +14,7 @@ function Router() {
       <Route path="/" component={SwapPage} />
       <Route path="/swap" component={SwapPage} />
       <Route path="/terms" component={TermsPage} />
+      <Route path="/locked-admin" component={AdminPage} />
       <Route component={NotFound} />
     </Switch>
   );

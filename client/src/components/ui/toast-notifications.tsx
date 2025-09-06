@@ -32,7 +32,6 @@ export function showToast({ title, description, type = 'info', duration = 5000 }
         <span>{description}</span>
       </div>
     ),
-    description,
     duration,
     className: `border-l-4 ${
       type === 'success' ? 'border-green-400 bg-green-400/10' :
