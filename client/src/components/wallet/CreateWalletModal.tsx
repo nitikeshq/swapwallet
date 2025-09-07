@@ -96,27 +96,42 @@ export function CreateWalletModal({ open, onOpenChange }: CreateWalletModalProps
   };
 
   const handleComplete = async () => {
-    console.log('[CREATE WALLET MODAL] Wallet setup completed');
+    console.log('[CREATE WALLET MODAL] 🎯 Wallet setup completed, starting connection process...');
     
     if (walletData) {
       try {
+        console.log('[CREATE WALLET MODAL] 🔄 Connecting created wallet with data:', walletData.address);
+        
         // Connect the created wallet automatically
         await connectCreatedWallet(walletData, password);
+        console.log('[CREATE WALLET MODAL] ✅ Wallet connected successfully!');
         
         // Create user in backend for referral system
+        console.log('[CREATE WALLET MODAL] 🔄 Creating user in backend...');
         await apiRequest('POST', '/api/users', {
           walletAddress: walletData.address,
           referralCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
         });
+        console.log('[CREATE WALLET MODAL] ✅ User created in backend!');
+        
+        // Wait a moment for state to propagate before closing modal
+        setTimeout(() => {
+          console.log('[CREATE WALLET MODAL] 🎉 All operations complete, closing modal');
+          onOpenChange(false);
+        }, 500);
         
         toastSuccess("Wallet Active", "Your wallet is now connected and ready to use!");
       } catch (error: any) {
-        console.error('[CREATE WALLET MODAL] Failed to activate wallet:', error);
+        console.error('[CREATE WALLET MODAL] ❌ Failed to activate wallet:', error);
         toastError("Activation Failed", "Wallet created but failed to activate. You can connect manually.");
+        // Still close the modal on error
+        onOpenChange(false);
       }
+    } else {
+      console.error('[CREATE WALLET MODAL] ❌ No wallet data available for connection');
+      onOpenChange(false);
     }
     
-    onOpenChange(false);
     // Reset state for next time
     setCurrentStep('password');
     setWalletData(null);

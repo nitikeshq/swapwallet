@@ -158,17 +158,37 @@ export function useWallet() {
         provider: null, // Local wallet, no external provider
       };
       
+      console.log('[WALLET HOOK] 🎯 SETTING CONNECTION STATE:', walletConnection);
+      
       // Store encrypted wallet locally
       if (password && walletData.privateKey) {
         await walletService.storeEncryptedWallet(walletData.address, walletData.privateKey, walletData.mnemonic, password);
+        console.log('[WALLET HOOK] Wallet encrypted and stored locally');
       }
       
-      // Update connection state
+      // Update connection state AGGRESSIVELY
       setConnection(walletConnection);
       setIsConnecting(false);
       setError(null);
       
-      console.log('[WALLET HOOK] Created wallet connected successfully');
+      // Force multiple state updates to ensure it sticks
+      setTimeout(() => {
+        console.log('[WALLET HOOK] Second state force update');
+        setConnection(walletConnection);
+      }, 50);
+      
+      setTimeout(() => {
+        console.log('[WALLET HOOK] Third state force update');
+        setConnection(walletConnection);
+      }, 200);
+      
+      console.log('[WALLET HOOK] 🎉 Created wallet connected successfully - State should be updated');
+      
+      // Show success toast
+      toast({
+        title: "Wallet Connected!",
+        description: `Connected to ${walletConnection.address.slice(0, 6)}...${walletConnection.address.slice(-4)}`,
+      });
       
       // Fetch balances in background
       fetchBalances(walletConnection.address).catch(err => {
@@ -177,6 +197,13 @@ export function useWallet() {
       
     } catch (error: any) {
       console.error('[WALLET HOOK] Failed to connect created wallet:', error);
+      
+      toast({
+        title: "Connection Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      
       throw error;
     }
   }, [toast, fetchBalances]);
