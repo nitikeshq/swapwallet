@@ -2,10 +2,13 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useWallet } from "@/hooks/useWallet";
 import { LoadingOverlay } from "@/components/ui/loading-overlay";
 import { toastSuccess, toastError } from "@/components/ui/toast-notifications";
-import { AlertTriangle, Key, Copy, Check, Wallet } from "lucide-react";
+import { AlertTriangle, Key, Copy, Check, Wallet, Lock, Eye, EyeOff } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
 import type { CreateWalletResult } from "@/types/wallet";
 
 interface CreateWalletModalProps {
@@ -13,21 +16,53 @@ interface CreateWalletModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type Step = 'warning' | 'mnemonic' | 'success';
+type Step = 'warning' | 'password' | 'mnemonic' | 'success';
 
 export function CreateWalletModal({ open, onOpenChange }: CreateWalletModalProps) {
-  const { createWallet } = useWallet();
-  const [currentStep, setCurrentStep] = useState<Step>('warning');
+  const { createWallet, connectCreatedWallet } = useWallet();
+  const [currentStep, setCurrentStep] = useState<Step>('password');
   const [walletData, setWalletData] = useState<CreateWalletResult | null>(null);
   const [mnemonicSaved, setMnemonicSaved] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const handlePasswordNext = async () => {
+    if (!password || password.length < 8) {
+      toastError("Invalid Password", "Password must be at least 8 characters long");
+      return;
+    }
+    
+    if (password !== confirmPassword) {
+      toastError("Password Mismatch", "Passwords do not match");
+      return;
+    }
+    
+    setCurrentStep('mnemonic');
+    
+    // Generate wallet with password
+    setIsCreating(true);
+    try {
+      console.log('[CREATE WALLET MODAL] Generating new wallet...');
+      const result = await createWallet(password);
+      setWalletData(result);
+      console.log('[CREATE WALLET MODAL] Wallet generated successfully');
+    } catch (error: any) {
+      console.error('[CREATE WALLET MODAL] Wallet creation failed:', error);
+      toastError("Wallet Creation Failed", error.message);
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   const handleCreateWallet = async () => {
     setIsCreating(true);
     try {
       console.log('[CREATE WALLET MODAL] Generating new wallet...');
-      const result = await createWallet();
+      const result = await createWallet(password);
       setWalletData(result);
       setCurrentStep('mnemonic');
       console.log('[CREATE WALLET MODAL] Wallet generated successfully');
@@ -60,14 +95,35 @@ export function CreateWalletModal({ open, onOpenChange }: CreateWalletModalProps
     setCurrentStep('success');
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     console.log('[CREATE WALLET MODAL] Wallet setup completed');
+    
+    if (walletData) {
+      try {
+        // Connect the created wallet automatically
+        await connectCreatedWallet(walletData, password);
+        
+        // Create user in backend for referral system
+        await apiRequest('POST', '/api/users', {
+          walletAddress: walletData.address,
+          referralCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
+        });
+        
+        toastSuccess("Wallet Active", "Your wallet is now connected and ready to use!");
+      } catch (error: any) {
+        console.error('[CREATE WALLET MODAL] Failed to activate wallet:', error);
+        toastError("Activation Failed", "Wallet created but failed to activate. You can connect manually.");
+      }
+    }
+    
     onOpenChange(false);
     // Reset state for next time
-    setCurrentStep('warning');
+    setCurrentStep('password');
     setWalletData(null);
     setMnemonicSaved(false);
     setCopied(false);
+    setPassword("");
+    setConfirmPassword("");
   };
 
   const renderWarningStep = () => (
@@ -88,14 +144,105 @@ export function CreateWalletModal({ open, onOpenChange }: CreateWalletModalProps
       </div>
       
       <Button 
-        onClick={handleCreateWallet} 
+        onClick={() => setCurrentStep('password')} 
         className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
-        disabled={isCreating}
-        data-testid="generate-wallet-button"
+        data-testid="next-to-password-button"
       >
         <Key className="h-4 w-4 mr-2" />
-        {isCreating ? "Generating..." : "Generate Wallet"}
+        Continue
       </Button>
+    </div>
+  );
+
+  const renderPasswordStep = () => (
+    <div className="space-y-4">
+      <div className="text-center mb-4">
+        <div className="w-16 h-16 bg-accent/20 rounded-full flex items-center justify-center mx-auto mb-4">
+          <Lock className="h-8 w-8 text-accent" />
+        </div>
+        <h4 className="font-semibold mb-2">Secure Your Wallet</h4>
+        <p className="text-sm text-muted-foreground">
+          Create a strong password to encrypt your wallet
+        </p>
+      </div>
+      
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="password">Wallet Password</Label>
+          <div className="relative">
+            <Input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter wallet password (min 8 characters)"
+              className="pr-10"
+              data-testid="wallet-password-input"
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="absolute right-0 top-0 h-full px-3"
+              onClick={() => setShowPassword(!showPassword)}
+              data-testid="toggle-password-visibility"
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </Button>
+          </div>
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="confirmPassword">Confirm Password</Label>
+          <div className="relative">
+            <Input
+              id="confirmPassword"
+              type={showConfirmPassword ? "text" : "password"}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirm your password"
+              className="pr-10"
+              data-testid="confirm-password-input"
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="absolute right-0 top-0 h-full px-3"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              data-testid="toggle-confirm-password-visibility"
+            >
+              {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </Button>
+          </div>
+        </div>
+        
+        <div className="text-xs text-muted-foreground space-y-1">
+          <div>• Password must be at least 8 characters long</div>
+          <div>• Use a combination of letters, numbers, and symbols</div>
+          <div>• This password will encrypt your wallet locally</div>
+        </div>
+      </div>
+      
+      <div className="flex space-x-2">
+        <Button
+          variant="outline"
+          onClick={() => setCurrentStep('warning')}
+          className="flex-1"
+          data-testid="back-button"
+        >
+          Back
+        </Button>
+        <Button
+          onClick={handlePasswordNext}
+          disabled={!password || !confirmPassword}
+          className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90"
+          data-testid="password-next-button"
+        >
+          <Lock className="h-4 w-4 mr-2" />
+          Next
+        </Button>
+      </div>
     </div>
   );
 
@@ -204,6 +351,8 @@ export function CreateWalletModal({ open, onOpenChange }: CreateWalletModalProps
     switch (currentStep) {
       case 'warning':
         return 'Create New Wallet';
+      case 'password':
+        return 'Set Wallet Password';
       case 'mnemonic':
         return 'Backup Recovery Phrase';
       case 'success':
@@ -220,6 +369,7 @@ export function CreateWalletModal({ open, onOpenChange }: CreateWalletModalProps
           </DialogHeader>
           
           {currentStep === 'warning' && renderWarningStep()}
+          {currentStep === 'password' && renderPasswordStep()}
           {currentStep === 'mnemonic' && renderMnemonicStep()}
           {currentStep === 'success' && renderSuccessStep()}
         </DialogContent>

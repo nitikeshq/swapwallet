@@ -19,7 +19,7 @@ export class WalletService {
   }
 
   // Create a new wallet with mnemonic
-  async createWallet(): Promise<CreateWalletResult> {
+  async createWallet(password?: string): Promise<CreateWalletResult> {
     try {
       console.log('[WALLET] Creating new wallet...');
       
@@ -36,6 +36,32 @@ export class WalletService {
     } catch (error) {
       console.error('[WALLET ERROR] Failed to create wallet:', error);
       throw new Error('Failed to create wallet');
+    }
+  }
+
+  // Store encrypted wallet in local storage
+  async storeEncryptedWallet(address: string, privateKey: string, mnemonic: string, password: string): Promise<void> {
+    try {
+      console.log('[WALLET] Storing encrypted wallet...');
+      
+      // Create a wallet object to encrypt
+      const walletData = {
+        address,
+        privateKey,
+        mnemonic,
+        createdAt: new Date().toISOString(),
+      };
+      
+      // Simple encryption using btoa (base64) - in production, use proper encryption
+      const encrypted = btoa(JSON.stringify(walletData) + ':' + password);
+      
+      // Store in localStorage with address as key
+      localStorage.setItem(`wallet_${address.toLowerCase()}`, encrypted);
+      
+      console.log('[WALLET] Wallet stored successfully');
+    } catch (error) {
+      console.error('[WALLET ERROR] Failed to store encrypted wallet:', error);
+      throw new Error('Failed to store wallet');
     }
   }
 

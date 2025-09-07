@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { walletService } from '@/lib/wallet';
 import { useToast } from '@/hooks/use-toast';
+import { BSC_CHAIN_ID } from '@/constants/tokens';
 import type { WalletConnection, TokenBalance, WalletProvider, CreateWalletResult } from '@/types/wallet';
 
 export function useWallet() {
@@ -95,11 +96,11 @@ export function useWallet() {
   }, [toast]);
 
   // Create new wallet
-  const createWallet = useCallback(async (): Promise<CreateWalletResult> => {
+  const createWallet = useCallback(async (password?: string): Promise<CreateWalletResult> => {
     try {
       console.log('[WALLET HOOK] Creating new wallet...');
       
-      const result = await walletService.createWallet();
+      const result = await walletService.createWallet(password);
       
       toast({
         title: "Wallet Created",
@@ -143,6 +144,42 @@ export function useWallet() {
       setIsLoading(false);
     }
   }, [connection?.address]);
+
+  // Connect created wallet automatically
+  const connectCreatedWallet = useCallback(async (walletData: CreateWalletResult, password: string) => {
+    try {
+      console.log('[WALLET HOOK] Connecting created wallet...', walletData.address);
+      
+      // Create wallet connection from the created wallet data
+      const walletConnection: WalletConnection = {
+        address: walletData.address,
+        chainId: BSC_CHAIN_ID,
+        isConnected: true,
+        provider: null, // Local wallet, no external provider
+      };
+      
+      // Store encrypted wallet locally
+      if (password && walletData.privateKey) {
+        await walletService.storeEncryptedWallet(walletData.address, walletData.privateKey, walletData.mnemonic, password);
+      }
+      
+      // Update connection state
+      setConnection(walletConnection);
+      setIsConnecting(false);
+      setError(null);
+      
+      console.log('[WALLET HOOK] Created wallet connected successfully');
+      
+      // Fetch balances in background
+      fetchBalances(walletConnection.address).catch(err => {
+        console.error('[WALLET HOOK] Background balance fetch failed:', err);
+      });
+      
+    } catch (error: any) {
+      console.error('[WALLET HOOK] Failed to connect created wallet:', error);
+      throw error;
+    }
+  }, [toast, fetchBalances]);
 
   // Get balance for specific token
   const getTokenBalance = useCallback((tokenSymbol: string): string => {
@@ -276,6 +313,7 @@ export function useWallet() {
     connect,
     disconnect,
     createWallet,
+    connectCreatedWallet,
     fetchBalances,
     getTokenBalance,
   };
