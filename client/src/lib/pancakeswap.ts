@@ -242,19 +242,8 @@ export class PancakeSwapService {
   // Get 24-hour price change
   private async get24hPriceChange(tokenAddress: string): Promise<string> {
     try {
-      const response = await fetch('https://api.pancakeswap.info/api/v2/tokens');
-      if (!response.ok) {
-        throw new Error('Failed to fetch token data');
-      }
-      
-      const data = await response.json();
-      const tokenData = data.data[tokenAddress.toLowerCase()];
-      
-      if (tokenData && tokenData.price_change_24h) {
-        const change = parseFloat(tokenData.price_change_24h);
-        return change >= 0 ? `+${change.toFixed(2)}` : change.toFixed(2);
-      }
-      
+      console.log('[PANCAKESWAP API] get24hPriceChange - returning mock data for:', tokenAddress);
+      // Return mock data to avoid network calls
       return '0';
     } catch (error) {
       console.error('[PANCAKESWAP API ERROR] Failed to get 24h change:', error);

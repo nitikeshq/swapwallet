@@ -225,17 +225,19 @@ export function useWallet() {
         const key = localStorage.key(i);
         if (key?.startsWith('wallet_')) {
           const address = key.replace('wallet_', '');
-          localWallets.push(address);
+          // Ensure proper 0x prefix
+          const formattedAddress = address.startsWith('0x') ? address : `0x${address}`;
+          localWallets.push(formattedAddress);
         }
       }
       
       if (localWallets.length > 0) {
         console.log('[WALLET HOOK] 🎯 FOUND LOCAL WALLET(S):', localWallets);
         
-        // Use the first local wallet found
-        const address = localWallets[0];
+        // Use the first local wallet found  
+        const address = localWallets[0]; // Already formatted with 0x prefix
         const walletConnection: WalletConnection = {
-          address: address.startsWith('0x') ? address : `0x${address}`,
+          address: address,
           chainId: BSC_CHAIN_ID,
           isConnected: true,
           provider: null, // Local wallet
