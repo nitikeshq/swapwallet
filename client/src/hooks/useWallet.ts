@@ -214,10 +214,45 @@ export function useWallet() {
     return balance?.balance || '0';
   }, [balances]);
 
-  // MEGA AGGRESSIVE MetaMask detection - check multiple ways
+  // Check for existing wallet connections (MetaMask and local wallets)
   useEffect(() => {
-    const checkMetaMaskConnection = async () => {
-      console.log('[WALLET HOOK] MEGA CHECK - looking for MetaMask...');
+    const checkExistingConnections = async () => {
+      console.log('[WALLET HOOK] 🔍 Checking for existing wallet connections...');
+      
+      // First, check for locally stored wallets
+      const localWallets = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key?.startsWith('wallet_')) {
+          const address = key.replace('wallet_', '');
+          localWallets.push(address);
+        }
+      }
+      
+      if (localWallets.length > 0) {
+        console.log('[WALLET HOOK] 🎯 FOUND LOCAL WALLET(S):', localWallets);
+        
+        // Use the first local wallet found
+        const address = localWallets[0];
+        const walletConnection: WalletConnection = {
+          address: address.startsWith('0x') ? address : `0x${address}`,
+          chainId: BSC_CHAIN_ID,
+          isConnected: true,
+          provider: null, // Local wallet
+        };
+        
+        console.log('[WALLET HOOK] 🚀 CONNECTING TO LOCAL WALLET:', walletConnection);
+        setConnection(walletConnection);
+        setIsConnecting(false);
+        setError(null);
+        
+        // Fetch balances
+        fetchBalances(walletConnection.address);
+        return; // Found local wallet, skip MetaMask check
+      }
+      
+      // If no local wallet, check for MetaMask
+      console.log('[WALLET HOOK] No local wallets found, checking MetaMask...');
       
       // Multiple ways to check for MetaMask
       const ethereum = (window as any).ethereum || (window as any).web3?.currentProvider;
@@ -284,20 +319,18 @@ export function useWallet() {
       }
     };
     
-    // Check immediately
-    checkMetaMaskConnection();
+    // Check immediately on component mount
+    checkExistingConnections();
     
-    // Keep checking aggressively
-    const interval = setInterval(checkMetaMaskConnection, 1000);
-    
-    // Also check when window loads
+    // Check for connections on window load
     if (document.readyState === 'loading') {
-      window.addEventListener('load', checkMetaMaskConnection);
+      window.addEventListener('load', checkExistingConnections);
     }
     
     return () => {
-      clearInterval(interval);
-      window.removeEventListener('load', checkMetaMaskConnection);
+      if (document.readyState === 'loading') {
+        window.removeEventListener('load', checkExistingConnections);
+      }
     };
   }, []);
 
