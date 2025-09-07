@@ -219,11 +219,20 @@ export class PancakeSwapService {
     try {
       console.log('[PANCAKESWAP API] Fetching 24h data for:', tokenAddress);
       
-      // Fetch from PancakeSwap API v2
+      // Fetch from PancakeSwap API v2 with timeout and error handling
+      const fetchWithTimeout = (url: string, timeout = 5000) => {
+        return Promise.race([
+          fetch(url),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Request timeout')), timeout)
+          )
+        ]);
+      };
+
       const [tokensResponse, pairsResponse] = await Promise.all([
-        fetch('https://api.pancakeswap.info/api/v2/tokens'),
-        fetch('https://api.pancakeswap.info/api/v2/pairs')
-      ]);
+        fetchWithTimeout('https://api.pancakeswap.info/api/v2/tokens'),
+        fetchWithTimeout('https://api.pancakeswap.info/api/v2/pairs')
+      ]) as [Response, Response];
       
       if (!tokensResponse.ok || !pairsResponse.ok) {
         throw new Error('Failed to fetch from PancakeSwap API');
